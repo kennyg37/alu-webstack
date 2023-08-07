@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+function audit_subdomain {
+    local domain="$1"
+    local subdomain="$2"
+    local subdomains=("www" "lb-01" "web-01" "web-02")
+    
+    if [ -z "$subdomain" ]; then
+        for sub in "${subdomains[@]}"; do
+            get_subdomain_info "$domain" "$sub"
+        done
+    else
+        get_subdomain_info "$domain" "$subdomain"
+    fi
+}
+
+function get_subdomain_info {
+    local domain="$1"
+    local subdomain="$2"
+    local record_type="$(nslookup "$subdomain.$domain" | awk '/^Name:/ {print $2}')"
+    local destination="$(nslookup "$subdomain.$domain" | awk '/^Address: / {print $2}')"
+    
+    echo "The subdomain $subdomain is a $record_type record and points to $destination"
+}
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <domain> [subdomain]"
+    exit 1
+fi
+
+domain="$1"
+subdomain="$2"
+
+audit_subdomain "$domain" "$subdomain"
