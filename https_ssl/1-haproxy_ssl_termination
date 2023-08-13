@@ -32,23 +32,20 @@ defaults
 	errorfile 502 /etc/haproxy/errors/502.http
 	errorfile 503 /etc/haproxy/errors/503.http
 	errorfile 504 /etc/haproxy/errors/504.http
+ 
+frontend www-https
+	bind :80
+	bind :443 ssl crt /etc/haproxy/certs/www.ganzak.tech.pem
+	redirect scheme https if !{ ssl_fc }
+	#http-request add-header X-Forwarded-Proto https
+	#acl letsencrypt-acl path_beg /.well-known/acme-challenge/
+	#use_backend letsencrypt-backend if letsencrypt-acl
+	default_backend my_servers
 
 backend my_servers
-	balance roundrobin
-	server 5684-web-01 54.221.116.64 check port 80
-	server 5684-web-02 54.90.173.18 check port 80
+        balance roundrobin
+	option httpchk GET /
+	option redispatch
+        server 5684-web-01 54.221.116.64:80 check port 80 maxconn 30
+        server 5684-web-02 54.90.173.18:80 check port 80 maxconn 30
 
-backend letsencrypt-backend
-	mode http
-	server letsencrypt-server 10.250.31.119:8080 
-
-frontend haproxy_inbound
-	bind *:80
-	bind *:443 ssl crt /etc/haproxy/certs/www.ganzak.tech.pem
-	redirect scheme https if !{ ssl_fc }
-    
-	# Use the letsencrypt-backend for ACME challenge requests
-	acl letsencrypt-acl path_beg /.well-known/acme-challenge/
-	use_backend letsencrypt-backend if letsencrypt-acl
-	default_backend my_servers
-	mode http
